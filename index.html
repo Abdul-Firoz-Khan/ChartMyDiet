@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChartMyDiet - Personalized Diet Planning</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        /* CSS Reset and Base Styles */
+        :root {
+            --primary: #4a6fa5;
+            --primary-dark: #3a5984;
+            --secondary: #6bbf59;
+            --secondary-dark: #5aa349;
+            --accent: #ff7e5f;
+            --light: #f8f9fa;
+            --dark: #343a40;
+            --gray: #6c757d;
+            --gray-light: #e9ecef;
+            --border-radius: 8px;
+            --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--dark);
+            background-color: #f5f7fa;
+        }
+
+        h1, h2, h3, h4 {
+            margin-bottom: 1rem;
+            line-height: 1.2;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: var(--primary);
+        }
+
+        h2 {
+            font-size: 2rem;
+            color: var(--primary-dark);
+        }
+
+        h3 {
+            font-size: 1.5rem;
+            color: var(--primary);
+        }
+
+        p {
+            margin-bottom: 1rem;
+        }
+
+        a {
+            text-decoration: none;
+            color: var(--primary);
+            transition: var(--transition);
+        }
+
+        a:hover {
+            color: var(--primary-dark);
+        }
+
+        button {
+            cursor: pointer;
+            border: none;
+            border-radius: var(--border-radius);
+            transition: var(--transition);
+            font-weight: 600;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            font-size: 1rem;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+        }
+
+        .btn-secondary {
+            background-color: var(--secondary);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--secondary-dark);
+        }
+
+        .btn-accent {
+            background-color: var(--accent);
+            color: white;
+        }
+
+        .btn-accent:hover {
+            background-color: #e86a4a;
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            border: 2px solid var(--primary);
+            color: var(--primary);
+        }
+
+        .btn-outline:hover {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .card {
+            background-color: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        /* Header and Navigation */
+        header {
+            background-color: white;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+        }
+
+        .nav-links li {
+            margin-left: 2rem;
+        }
+
+        .nav-links a {
+            color: var(--dark);
+            font-weight: 500;
+        }
+
+        .nav-links a:hover {
+            color: var(--primary);
+        }
+
+        .mobile-menu-btn {
+            display: none;
+            background: none;
+            font-size: 1.5rem;
+            color: var(--dark);
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 5rem 0;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
+            text-align: center;
+        }
+
+        .hero h1 {
+            margin-bottom: 1.5rem;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            max-width: 700px;
+            margin: 0 auto 2rem;
+            color: var(--gray);
+        }
+
+        /* Form Section */
+        .form-section {
+            padding: 3rem 0;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--gray-light);
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(74, 111, 165, 0.2);
+        }
+
+        .radio-group, .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        .radio-option, .checkbox-option {
+            display: flex;
+            align-items: center;
+        }
+
+        .radio-option input, .checkbox-option input {
+            width: auto;
+            margin-right: 0.5rem;
+        }
+
+        .error-message {
+            color: #dc3545;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+            display: none;
+        }
+
+        .form-actions {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 2rem;
+        }
+
+        /* Results Section */
+        .results-section {
+            padding: 3rem 0;
+            display: none;
+        }
+
+        .diet-plan {
+            background-color: var(--gray-light);
+            padding: 1.5rem;
+            border-radius: var(--border-radius);
+            white-space: pre-line;
+            line-height: 1.8;
+        }
+
+        .results-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 1.5rem;
+        }
+
+        /* Loading Spinner */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: var(--primary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Footer */
+        footer {
+            background-color: var(--dark);
+            color: white;
+            padding: 3rem 0 2rem;
+        }
+
+        .footer-content {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .footer-section h3 {
+            color: white;
+            margin-bottom: 1.5rem;
+        }
+
+        .footer-section p, .footer-section a {
+            color: var(--gray-light);
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .footer-section a:hover {
+            color: white;
+        }
+
+        .social-links {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .social-links a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            transition: var(--transition);
+        }
+
+        .social-links a:hover {
+            background-color: var(--primary);
+            transform: translateY(-3px);
+        }
+
+        .copyright {
+            text-align: center;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--gray-light);
+            font-size: 0.9rem;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 992px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .footer-content {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .navbar {
+                flex-wrap: wrap;
+            }
+            
+            .nav-links {
+                display: none;
+                width: 100%;
+                flex-direction: column;
+                margin-top: 1rem;
+            }
+            
+            .nav-links.active {
+                display: flex;
+            }
+            
+            .nav-links li {
+                margin: 0.5rem 0;
+            }
+            
+            .mobile-menu-btn {
+                display: block;
+            }
+            
+            .hero h1 {
+                font-size: 2rem;
+            }
+            
+            .form-actions {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .form-actions button {
+                width: 100%;
+            }
+            
+            .results-actions {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .results-actions button {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .footer-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .card {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header and Navigation -->
+    <header>
+        <div class="container">
+            <nav class="navbar">
+                <a href="#" class="logo">ChartMyDiet</a>
+                <button class="mobile-menu-btn" id="mobileMenuBtn">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <ul class="nav-links" id="navLinks">
+                    <li><a href="#home">Home</a></li>	
+                    <li><a href="#contact">Contact</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero" id="home">
+        <div class="container">
+            <h1>Personalized Diet Planning Made Simple</h1>
+            <p>Get a customized 2-day Indian diet plan based on your unique profile, preferences, and health requirements.</p>
+            <button class="btn btn-primary" id="scrollToForm">Generate My Diet Plan</button>
+        </div>
+    </section>
+
+    <!-- Form Section -->
+    <section class="form-section" id="form">
+        <div class="container">
+            <div class="card">
+                <h2>Create Your Personalized Diet Plan</h2>
+                <p>Fill in your details to get a customized 2-day Indian diet plan tailored to your needs.</p>
+                
+                <form id="dietForm">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="name">Name *</label>
+                            <input type="text" id="name" name="name" required>
+                            <div class="error-message" id="nameError">Please enter your name</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="age">Age *</label>
+                            <input type="number" id="age" name="age" min="15" max="100" required>
+                            <div class="error-message" id="ageError">Age must be between 15 and 100</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Gender *</label>
+                            <div class="radio-group">
+                                <div class="radio-option">
+                                    <input type="radio" id="male" name="gender" value="Male" required>
+                                    <label for="male">Male</label>
+                                </div>
+                                <div class="radio-option">
+                                    <input type="radio" id="female" name="gender" value="Female">
+                                    <label for="female">Female</label>
+                                </div>
+                            </div>
+                            <div class="error-message" id="genderError">Please select your gender</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="weight">Weight (kg) *</label>
+                            <input type="number" id="weight" name="weight" min="30" max="200" step="0.1" required>
+                            <div class="error-message" id="weightError">Please enter a valid weight</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="height">Height Range *</label>
+                            <select id="height" name="height" required>
+                                <option value="">Select Height Range</option>
+                                <option value="3 to 4 ft">3 to 4 ft</option>
+                                <option value="4 to 5 ft">4 to 5 ft</option>
+                                <option value="5 to 6 ft">5 to 6 ft</option>
+                                <option value="6 to 7 ft">6 to 7 ft</option>
+                            </select>
+                            <div class="error-message" id="heightError">Please select your height range</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Activity Level *</label>
+                            <div class="radio-group">
+                                <div class="radio-option">
+                                    <input type="radio" id="noExercise" name="activity" value="No Exercise" required>
+                                    <label for="noExercise">No Exercise</label>
+                                </div>
+                                <div class="radio-option">
+                                    <input type="radio" id="moderate" name="activity" value="Moderately Active">
+                                    <label for="moderate">Moderately Active</label>
+                                </div>
+                                <div class="radio-option">
+                                    <input type="radio" id="veryActive" name="activity" value="Very Active">
+                                    <label for="veryActive">Very Active</label>
+                                </div>
+                            </div>
+                            <div class="error-message" id="activityError">Please select your activity level</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Diet Restriction *</label>
+                            <div class="radio-group">
+                                <div class="radio-option">
+                                    <input type="radio" id="nonRestrictive" name="diet" value="Non-restrictive" required>
+                                    <label for="nonRestrictive">Non-restrictive</label>
+                                </div>
+                                <div class="radio-option">
+                                    <input type="radio" id="vegetarian" name="diet" value="Vegetarian">
+                                    <label for="vegetarian">Vegetarian</label>
+                                </div>
+                                <div class="radio-option">
+                                    <input type="radio" id="jain" name="diet" value="Jain">
+                                    <label for="jain">Jain</label>
+                                </div>
+                                <div class="radio-option">
+                                    <input type="radio" id="vegan" name="diet" value="Vegan">
+                                    <label for="vegan">Vegan</label>
+                                </div>
+                            </div>
+                            <div class="error-message" id="dietError">Please select your diet restriction</div>
+                        </div>
+                        
+                        <div class="form-group full-width">
+                            <label>Disease (If Any)</label>
+                            <div class="checkbox-group">
+                                <div class="checkbox-option">
+                                    <input type="checkbox" id="highBP" name="disease" value="High Blood Pressure">
+                                    <label for="highBP">High Blood Pressure</label>
+                                </div>
+                                <div class="checkbox-option">
+                                    <input type="checkbox" id="diabetes" name="disease" value="Diabetes">
+                                    <label for="diabetes">Diabetes</label>
+                                </div>
+                                <div class="checkbox-option">
+                                    <input type="checkbox" id="thyroid" name="disease" value="Thyroid">
+                                    <label for="thyroid">Thyroid</label>
+                                </div>
+                                <div class="checkbox-option">
+                                    <input type="checkbox" id="none" name="disease" value="None">
+                                    <label for="none">None</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-outline" id="resetForm">Reset Form</button>
+                        <button type="submit" class="btn btn-primary">Generate My Diet Plan</button>
+                    </div>
+                </form>
+            </div>
+            
+            <!-- Loading Spinner -->
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Generating your personalized diet plan...</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Results Section -->
+    <section class="results-section" id="results">
+        <div class="container">
+            <div class="card">
+                <h2>Your Personalized Diet Plan</h2>
+                <div class="diet-plan" id="dietPlan">
+                    <!-- Diet plan will be displayed here -->
+                </div>
+                <div class="results-actions">
+                    <button class="btn btn-accent" id="downloadPDF">Download as PDF</button>
+                    <button class="btn btn-outline" id="backToForm">Create Another Plan</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer id="contact">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>Contact Info</h3>
+                    <p><i class="fas fa-user"></i> Abdul Firoz Khan</p>
+                    <p><i class="fas fa-phone"></i> +91 9284424471</p>
+                    <p><i class="fas fa-envelope"></i> abdulfirozkhan71@gmail.com</p>
+                </div>
+            </div>
+            
+            <div class="copyright">
+                <p>&copy; 2025 ChartMyDiet. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Wait for DOM to be fully loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Mobile menu toggle
+            const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+            const navLinks = document.getElementById('navLinks');
+            
+            mobileMenuBtn.addEventListener('click', function() {
+                navLinks.classList.toggle('active');
+            });
+            
+            // Scroll to form when CTA button is clicked
+            const scrollToFormBtn = document.getElementById('scrollToForm');
+            const formSection = document.getElementById('form');
+            
+            scrollToFormBtn.addEventListener('click', function() {
+                formSection.scrollIntoView({ behavior: 'smooth' });
+            });
+            
+            // Disease checkbox validation
+            const noneCheckbox = document.getElementById('none');
+            const otherDiseases = document.querySelectorAll('input[name="disease"]:not(#none)');
+            
+            noneCheckbox.addEventListener('change', function() {
+                if (this.checked) {
+                    otherDiseases.forEach(checkbox => {
+                        checkbox.checked = false;
+                        checkbox.disabled = true;
+                    });
+                } else {
+                    otherDiseases.forEach(checkbox => {
+                        checkbox.disabled = false;
+                    });
+                }
+            });
+            
+            // Other disease checkboxes should uncheck "None"
+            otherDiseases.forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    if (this.checked) {
+                        noneCheckbox.checked = false;
+                    }
+                });
+            });
+            
+            // Form validation and submission
+            const dietForm = document.getElementById('dietForm');
+            const loading = document.getElementById('loading');
+            const resultsSection = document.getElementById('results');
+            const dietPlan = document.getElementById('dietPlan');
+            
+            dietForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Reset error messages
+                document.querySelectorAll('.error-message').forEach(error => {
+                    error.style.display = 'none';
+                });
+                
+                // Validate form
+                let isValid = true;
+                
+                // Name validation
+                const name = document.getElementById('name').value.trim();
+                if (!name) {
+                    document.getElementById('nameError').style.display = 'block';
+                    isValid = false;
+                }
+                
+                // Age validation
+                const age = parseInt(document.getElementById('age').value);
+                if (isNaN(age) || age < 15 || age > 100) {
+                    document.getElementById('ageError').style.display = 'block';
+                    isValid = false;
+                }
+                
+                // Gender validation
+                const gender = document.querySelector('input[name="gender"]:checked');
+                if (!gender) {
+                    document.getElementById('genderError').style.display = 'block';
+                    isValid = false;
+                }
+                
+                // Weight validation
+                const weight = parseFloat(document.getElementById('weight').value);
+                if (isNaN(weight) || weight < 30 || weight > 200) {
+                    document.getElementById('weightError').style.display = 'block';
+                    isValid = false;
+                }
+                
+                // Height validation
+                const height = document.getElementById('height').value;
+                if (!height) {
+                    document.getElementById('heightError').style.display = 'block';
+                    isValid = false;
+                }
+                
+                // Activity level validation
+                const activity = document.querySelector('input[name="activity"]:checked');
+                if (!activity) {
+                    document.getElementById('activityError').style.display = 'block';
+                    isValid = false;
+                }
+                
+                // Diet restriction validation
+                const diet = document.querySelector('input[name="diet"]:checked');
+                if (!diet) {
+                    document.getElementById('dietError').style.display = 'block';
+                    isValid = false;
+                }
+                
+                if (!isValid) {
+                    return;
+                }
+                
+                // Show loading spinner
+                loading.style.display = 'block';
+                
+                // Collect form data
+                const selectedDiseases = Array.from(document.querySelectorAll('input[name="disease"]:checked'))
+                    .map(checkbox => checkbox.value);
+                
+                const formData = {
+                    "Enter Your Name": name,
+                    "Age": age,
+                    "Gender": gender.value,
+                    "Weight (kg)": weight,
+                    "Height Range In Feet": height,
+                    "Enter Your Activity Level": activity.value,
+                    "Diet Restriction (If Any)": diet.value,
+                    "Disease (If Any)": selectedDiseases
+                };
+                
+                // Send POST request to webhook
+                fetch('https://abdulkhan.mywire.org/webhook/diet-plan', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Hide loading spinner
+                    loading.style.display = 'none';
+                    
+                    // Display diet plan
+                    if (data.DietPlan) {
+                        dietPlan.textContent = data.DietPlan;
+                    } else {
+                        dietPlan.textContent = "Sorry, we couldn't generate a diet plan at this time. Please try again later.";
+                    }
+                    
+                    // Show results section and scroll to it
+                    resultsSection.style.display = 'block';
+                    resultsSection.scrollIntoView({ behavior: 'smooth' });
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    loading.style.display = 'none';
+                    dietPlan.textContent = "Sorry, there was an error generating your diet plan. Please try again.";
+                    resultsSection.style.display = 'block';
+                    resultsSection.scrollIntoView({ behavior: 'smooth' });
+                });
+            });
+            
+            // Reset form
+            const resetFormBtn = document.getElementById('resetForm');
+            
+            resetFormBtn.addEventListener('click', function() {
+                dietForm.reset();
+                document.querySelectorAll('.error-message').forEach(error => {
+                    error.style.display = 'none';
+                });
+                otherDiseases.forEach(checkbox => {
+                    checkbox.disabled = false;
+                });
+            });
+            
+            // Back to form button
+            const backToFormBtn = document.getElementById('backToForm');
+            
+            backToFormBtn.addEventListener('click', function() {
+                resultsSection.style.display = 'none';
+                formSection.scrollIntoView({ behavior: 'smooth' });
+            });
+            
+            // Download PDF
+            const downloadPDFBtn = document.getElementById('downloadPDF');
+            
+            downloadPDFBtn.addEventListener('click', function() {
+                // Using jsPDF library to generate PDF
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                // Add header
+                doc.setFontSize(20);
+                doc.setTextColor(74, 111, 165);
+                doc.text('ChartMyDiet - Personalized Diet Plan', 20, 20);
+                
+                // Add date
+                doc.setFontSize(12);
+                doc.setTextColor(100, 100, 100);
+                doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 20, 30);
+                
+                // Add diet plan
+                doc.setFontSize(12);
+                doc.setTextColor(0, 0, 0);
+                
+                // Split the diet plan text into lines that fit the PDF
+                const splitText = doc.splitTextToSize(dietPlan.textContent, 170);
+                doc.text(splitText, 20, 45);
+                
+                // Save the PDF
+                doc.save('ChartMyDiet-Plan.pdf');
+            });
+        });
+    </script>
+</body>
+</html>
