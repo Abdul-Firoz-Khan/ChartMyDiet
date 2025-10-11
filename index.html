@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🥗ChartMyDiet - Personalized Diet Planning</title>
+    <!-- Add jsPDF library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         /* 🌈 Root Color Palette */
         :root {
@@ -451,6 +454,18 @@
             background-color: #059669;
             transform: translateY(-1px);
         }
+
+        /* PDF specific styles */
+        @media print {
+            .navbar, .download-btn, .submit-btn {
+                display: none !important;
+            }
+            
+            .diet-plan {
+                box-shadow: none;
+                border: 1px solid #ddd;
+            }
+        }
         
         /* ================================
            🦶 Footer
@@ -655,6 +670,25 @@
                         </div>
                         <div class="error-message" id="diet-error">Please select your diet restriction</div>
                     </div>
+
+                    <!-- NEW GOAL FIELD -->
+                    <div class="form-group">
+                        <label>Goal (Optional)</label>
+                        <div class="radio-group">
+                            <div class="radio-option">
+                                <input type="radio" id="muscle-gain" name="goal" value="Muscle Gain">
+                                <label for="muscle-gain">Muscle Gain</label>
+                            </div>
+                            <div class="radio-option">
+                                <input type="radio" id="fat-loss" name="goal" value="Fat Loss">
+                                <label for="fat-loss">Fat Loss</label>
+                            </div>
+                            <div class="radio-option">
+                                <input type="radio" id="maintenance" name="goal" value="Maintenance">
+                                <label for="maintenance">Maintenance</label>
+                            </div>
+                        </div>
+                    </div>
                     
                     <div class="form-group">
                         <label>Disease</label>
@@ -776,6 +810,9 @@
             const heightInInput = document.getElementById('height-in');
             const emailInput = document.getElementById('email');
             
+            // Goal radio buttons
+            const goalRadios = document.querySelectorAll('input[name="goal"]');
+            
             // Height unit selector
             const heightUnitButtons = document.querySelectorAll('.height-unit-selector button');
             const heightCmContainer = document.getElementById('height-cm-input');
@@ -793,15 +830,25 @@
             const downloadPdfBtn = document.getElementById('download-pdf');
             const createNewPlanBtn = document.getElementById('create-new-plan');
             
-            // Navigation functionality
+            // Navigation functionality - FIXED HOME NAVIGATION
             homeLink.addEventListener('click', function() {
-                location.reload();
+                showHomePage();
             });
             
             homeNav.addEventListener('click', function(e) {
                 e.preventDefault();
-                location.reload();
+                showHomePage();
             });
+            
+            function showHomePage() {
+                // Show all main sections for home page
+                headerSection.style.display = 'block';
+                formSection.style.display = 'block';
+                aboutSection.style.display = 'none';
+                loadingSection.style.display = 'none';
+                resultsSection.style.display = 'none';
+                window.scrollTo(0, 0);
+            }
             
             aboutNav.addEventListener('click', function(e) {
                 e.preventDefault();
@@ -1005,43 +1052,18 @@
                 }
             }
             
-            // Get selected diseases - if none selected, default to "No Disease"
-            function getSelectedDiseases() {
-                const selectedDiseases = [];
-                const checkedDiseases = document.querySelectorAll('input[name="disease"]:checked');
-                
-                if (checkedDiseases.length === 0) {
-                    // If no disease is selected, default to "No Disease"
-                    selectedDiseases.push("No Disease");
-                } else {
-                    checkedDiseases.forEach(checkbox => {
-                        selectedDiseases.push(checkbox.value);
-                    });
-                }
-                
-                return selectedDiseases;
+            // Get selected goal
+            function getSelectedGoal() {
+                const selectedGoal = document.querySelector('input[name="goal"]:checked');
+                return selectedGoal ? selectedGoal.value : null;
             }
             
-            // Reset form function
-            function resetForm() {
-                dietForm.reset();
+            // Get selected diseases - if none selected, default to "No Disease"
+            function getSelectedDiseases() {
+                const selectedDiseases = Array.from(document.querySelectorAll('input[name="disease"]:checked'))
+                    .map(checkbox => checkbox.value);
                 
-                // Reset height unit to cm
-                heightUnitButtons.forEach(btn => btn.classList.remove('active'));
-                heightUnitButtons[0].classList.add('active');
-                heightCmContainer.style.display = 'block';
-                heightFtContainer.style.display = 'none';
-                heightCmInput.required = true;
-                heightFtInput.required = false;
-                heightInInput.required = false;
-                
-                // Enable PCOS checkbox on form reset
-                pcosCheckbox.disabled = false;
-                
-                // Reset error messages
-                document.querySelectorAll('.error-message').forEach(el => {
-                    el.style.display = 'none';
-                });
+                return selectedDiseases.length > 0 ? selectedDiseases : ['No Disease'];
             }
             
             // Form submission
@@ -1053,31 +1075,27 @@
                 }
                 
                 // Show loading section
-                headerSection.style.display = 'none';
-                aboutSection.style.display = 'none';
-                formSection.style.display = 'none';
                 loadingSection.style.display = 'block';
-                resultsSection.style.display = 'none';
+                formSection.style.display = 'none';
+                aboutSection.style.display = 'none';
+                headerSection.style.display = 'none';
                 
-                // Prepare data for submission
+                // Prepare form data
                 const formData = {
                     Name: nameInput.value.trim(),
                     Gender: genderSelect.value,
                     Age: parseInt(ageInput.value),
-                    Weight: parseFloat(weightInput.value),
                     Height: getHeightInCm(),
+                    Weight: parseFloat(weightInput.value),
                     Activity_Level: document.querySelector('input[name="activity"]:checked').value,
                     Diet_Restriction: document.querySelector('input[name="diet"]:checked').value,
-                    Disease: getSelectedDiseases()
+                    Disease: getSelectedDiseases(),
+                    Goal: getSelectedGoal(), // Include goal in submission
+                    Email: emailInput.value.trim() || undefined
                 };
                 
-                // Add email if provided
-                if (emailInput.value.trim()) {
-                    formData.email = emailInput.value.trim();
-                }
-                
                 // Submit to webhook
-                fetch('https://abdulkhan.mywire.org/webhook/diet-plan4', {
+                fetch('https://abdulkhan.mywire.org/webhook/diet-plan5', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1095,151 +1113,323 @@
                     loadingSection.style.display = 'none';
                     
                     // Display results
-                    displayDietPlan(data.formattedDietPlan);
+                    displayDietPlan(data);
                     resultsSection.style.display = 'block';
                 })
                 .catch(error => {
                     console.error('Error:', error);
                     loadingSection.style.display = 'none';
-                    alert('There was an error generating your diet plan. Please try again.');
-                    headerSection.style.display = 'block';
                     formSection.style.display = 'block';
+                    alert('There was an error generating your diet plan. Please try again.');
                 });
             });
             
-            // Display diet plan - IMPROVED VERSION with Day 1/Day 2 coloring
-            function displayDietPlan(formattedPlan) {
-                // Parse the formatted plan and convert to HTML
-                const sections = formattedPlan.split('\n\n');
+            // Display diet plan
+            function displayDietPlan(data) {
+                // Format the diet plan according to the specified structure
                 let html = '';
                 
-                sections.forEach(section => {
-                    const lines = section.split('\n');
-                    const firstLine = lines[0];
-                    
-                    if (firstLine.includes('Personalized 2-Day Diet Plan')) {
-                        html += `<div class="plan-header">`;
-                        html += `<h2>${firstLine.replace('Personalized', '🥗 Personalized')}</h2>`;
-                        for (let i = 1; i < lines.length; i++) {
-                            if (lines[i].trim()) {
-                                html += `<p>${lines[i]}</p>`;
-                            }
-                        }
-                        html += `</div>`;
-                    } else if (firstLine.includes('🧬 Health Profile')) {
-                        html += `<div class="health-profile">`;
-                        html += `<h3>${firstLine}</h3>`;
-                        html += `<ul>`;
-                        
-                        for (let i = 1; i < lines.length; i++) {
-                            const line = lines[i].trim();
-                            if (line) {
-                                if (line.includes('Diet Restriction:')) {
-                                    html += `<li><strong>Diet Restriction:</strong> ${line.split(':')[1]}</li>`;
-                                } else if (line.includes('Disease:')) {
-                                    html += `<li><strong>Condition:</strong> ${line.split(':')[1]}</li>`;
-                                } else {
-                                    html += `<li>${line}</li>`;
-                                }
-                            }
-                        }
-                        
-                        html += `</ul>`;
-                        html += `</div>`;
-                    } else if (firstLine.includes('🌅') || firstLine.includes('🍳') || 
-                              firstLine.includes('🍎') || firstLine.includes('🍲') || 
-                              firstLine.includes('☕') || firstLine.includes('🍛') || 
-                              firstLine.includes('🛏️')) {
-                        html += `<div class="meal-section">`;
-                        html += `<h3>${firstLine}</h3>`;
-                        
-                        // Check if this section has content
-                        let hasContent = false;
-                        let contentHtml = '';
-                        
-                        for (let i = 1; i < lines.length; i++) {
-                            const line = lines[i].trim();
-                            if (line) {
-                                hasContent = true;
-                                if (line.startsWith('•')) {
-                                    contentHtml += `<li>${line.substring(1).trim()}</li>`;
-                                } else if (line.includes('Day 1') || line.includes('Day 2')) {
-                                    // Handle day-specific content with color coding
-                                    const dayClass = line.includes('Day 1') ? 'day-1' : 'day-2';
-                                    const dayContent = line.replace('Day 1', '').replace('Day 2', '').trim();
-                                    contentHtml += `<li class="day-header ${dayClass}">Day ${line.includes('Day 1') ? '1' : '2'}: <span class="day-content">${dayContent}</span></li>`;
-                                } else {
-                                    // Handle any other content that should be in the list
-                                    contentHtml += `<li>${line}</li>`;
-                                }
-                            }
-                        }
-                        
-                        if (hasContent) {
-                            html += `<ul>${contentHtml}</ul>`;
-                        } else {
-                            // If no content, show a placeholder
-                            html += `<p>No specific recommendations provided for this meal time.</p>`;
-                        }
-                        
-                        html += `</div>`;
-                    } else if (firstLine.includes('⚕️ Special Considerations')) {
-                        html += `<div class="special-considerations">`;
-                        html += `<h3>${firstLine}</h3>`;
-                        html += `<ul>`;
-                        
-                        for (let i = 1; i < lines.length; i++) {
-                            const line = lines[i].trim();
-                            if (line && line.startsWith('-')) {
-                                // Extract condition from parentheses if present
-                                let displayLine = line.substring(1).trim();
-                                const conditionMatch = displayLine.match(/\(([^)]+)\)/);
-                                let condition = '';
+                // Main header with user name
+                html += `<div style="text-align:center;">
+                    <h2 style="color:#7C3AED; font-size:1.75rem;">🥗 Personalized 2-Day Diet Plan for <span style="color:#7C3AED; font-size:1.75rem;">${data.name}</span></h2>
+                </div>`;
+                
+                // Health Profile section
+                html += `<div class="health-profile">
+                    <h3>🧬 Health Profile</h3>
+                    <p>BMI: ${data.bmiNumber}</p>
+                    <p>Category: ${data.bmiCategory}</p>
+                    <p>Target Calorie Intake: ${data.finalCalories} kcal/day</p>
+                    <p>${data.calorieNote}</p>
+                    <p>• Diet Restriction: ${data.Diet_Restriction}</p>
+                    <p>• Diseases: ${data.diseases.join(', ')}</p>
+                    ${data.Goal ? `<p>• Goal: ${data.Goal}</p>` : ''}
+                </div>`;
+                
+                // Early Morning section
+                if (data.dietTemplate && data.dietTemplate.EarlyMorning) {
+                    html += `<div class="meal-section">
+                        <h3>🌅 Early Morning (6:30 AM)</h3>
+                        <ul>
+                            ${data.dietTemplate.EarlyMorning.map(item => `<li>${item}</li>`).join('')}
+                        </ul>
+                        <p>Calories: ${getCleanMacros(data.dietTemplate.EarlyMorning, data.macroMap).calories} kcal | Protein: ${getCleanMacros(data.dietTemplate.EarlyMorning, data.macroMap).protein}g | Carbs: ${getCleanMacros(data.dietTemplate.EarlyMorning, data.macroMap).carbs}g | Fat: ${getCleanMacros(data.dietTemplate.EarlyMorning, data.macroMap).fat}g</p>
+                    </div>`;
+                }
+                
+                // Breakfast section with Day 1 and Day 2
+                if (data.dietTemplate && (data.dietTemplate.BreakfastDay1 || data.dietTemplate.BreakfastDay2)) {
+                    html += `<div class="meal-section">
+                        <h3><strong>🍳 Breakfast (8:00 AM)</strong></h3>
+                        <div class="day-header day-1">Day 1:</div>
+                        <div class="day-content">
+                            <ul>
+                                ${data.dietTemplate.BreakfastDay1 ? data.dietTemplate.BreakfastDay1.map(item => `<li>${item}</li>`).join('') : ''}
+                            </ul>
+                            <p>${formatMealMacros(data.dietTemplate.BreakfastDay1, data.macroMap)}</p>
+                        </div>
+                        <div class="day-header day-2">Day 2:</div>
+                        <div class="day-content">
+                            <ul>
+                                ${data.dietTemplate.BreakfastDay2 ? data.dietTemplate.BreakfastDay2.map(item => `<li>${item}</li>`).join('') : ''}
+                            </ul>
+                            <p>${formatMealMacros(data.dietTemplate.BreakfastDay2, data.macroMap)}</p>
+                        </div>
+                    </div>`;
+                }
+                
+                // Mid-Morning Snack section with Day 1 and Day 2
+                if (data.dietTemplate && (data.dietTemplate.SnackDay1 || data.dietTemplate.SnackDay2)) {
+                    html += `<div class="meal-section">
+                        <h3><strong>🍎 Mid-Morning Snack (10:30 AM)</strong></h3>
+                        <div class="day-header day-1">Day 1:</div>
+                        <div class="day-content">
+                            <ul>
+                                ${data.dietTemplate.SnackDay1 ? data.dietTemplate.SnackDay1.map(item => `<li>${item}</li>`).join('') : ''}
+                            </ul>
+                            <p>${formatMealMacros(data.dietTemplate.SnackDay1, data.macroMap)}</p>
+                        </div>
+                        <div class="day-header day-2">Day 2:</div>
+                        <div class="day-content">
+                            <ul>
+                                ${data.dietTemplate.SnackDay2 ? data.dietTemplate.SnackDay2.map(item => `<li>${item}</li>`).join('') : ''}
+                            </ul>
+                            <p>${formatMealMacros(data.dietTemplate.SnackDay2, data.macroMap)}</p>
+                        </div>
+                    </div>`;
+                }
+                
+                // Lunch section with Day 1 and Day 2
+                if (data.dietTemplate && (data.dietTemplate.LunchDay1 || data.dietTemplate.LunchDay2)) {
+                    html += `<div class="meal-section">
+                        <h3><strong>🍲 Lunch (1:00 PM)</strong></h3>
+                        <div class="day-header day-1">Day 1:</div>
+                        <div class="day-content">
+                            <ul>
+                                ${data.dietTemplate.LunchDay1 ? data.dietTemplate.LunchDay1.map(item => `<li>${item}</li>`).join('') : ''}
+                            </ul>
+                            <p>${formatMealMacros(data.dietTemplate.LunchDay1, data.macroMap)}</p>
+                        </div>
+                        <div class="day-header day-2">Day 2:</div>
+                        <div class="day-content">
+                            <ul>
+                                ${data.dietTemplate.LunchDay2 ? data.dietTemplate.LunchDay2.map(item => `<li>${item}</li>`).join('') : ''}
+                            </ul>
+                            <p>${formatMealMacros(data.dietTemplate.LunchDay2, data.macroMap)}</p>
+                        </div>
+                    </div>`;
+                }
+                
+                // Evening Snack section with Day 1 and Day 2
+                if (data.dietTemplate && (data.dietTemplate.EveningSnackDay1 || data.dietTemplate.EveningSnackDay2)) {
+                    html += `<div class="meal-section">
+                        <h3><strong>☕ Evening Snack (4:30 PM)</strong></h3>
+                        <div class="day-header day-1">Day 1:</div>
+                        <div class="day-content">
+                            <ul>
+                                ${data.dietTemplate.EveningSnackDay1 ? data.dietTemplate.EveningSnackDay1.map(item => `<li>${item}</li>`).join('') : ''}
+                            </ul>
+                            <p>${formatMealMacros(data.dietTemplate.EveningSnackDay1, data.macroMap)}</p>
+                        </div>
+                        <div class="day-header day-2">Day 2:</div>
+                        <div class="day-content">
+                            <ul>
+                                ${data.dietTemplate.EveningSnackDay2 ? data.dietTemplate.EveningSnackDay2.map(item => `<li>${item}</li>`).join('') : ''}
+                            </ul>
+                            <p>${formatMealMacros(data.dietTemplate.EveningSnackDay2, data.macroMap)}</p>
+                        </div>
+                    </div>`;
+                }
+                
+                // Dinner section with Day 1 and Day 2
+                if (data.dietTemplate && (data.dietTemplate.DinnerDay1 || data.dietTemplate.DinnerDay2)) {
+                    html += `<div class="meal-section">
+                        <h3><strong>🍛 Dinner (7:30 PM)</strong></h3>
+                        <div class="day-header day-1">Day 1:</div>
+                        <div class="day-content">
+                            <ul>
+                                ${data.dietTemplate.DinnerDay1 ? data.dietTemplate.DinnerDay1.map(item => `<li>${item}</li>`).join('') : ''}
+                            </ul>
+                            <p>${formatMealMacros(data.dietTemplate.DinnerDay1, data.macroMap)}</p>
+                        </div>
+                        <div class="day-header day-2">Day 2:</div>
+                        <div class="day-content">
+                            <ul>
+                                ${data.dietTemplate.DinnerDay2 ? data.dietTemplate.DinnerDay2.map(item => `<li>${item}</li>`).join('') : ''}
+                            </ul>
+                            <p>${formatMealMacros(data.dietTemplate.DinnerDay2, data.macroMap)}</p>
+                        </div>
+                    </div>`;
+                }
+                
+                // Bedtime section
+                if (data.dietTemplate && data.dietTemplate.Bedtime) {
+                    html += `<div class="meal-section">
+                        <h3>🛏️ Bedtime (9:30 PM)</h3>
+                        <ul>
+                            ${data.dietTemplate.Bedtime.map(item => `<li>${item}</li>`).join('')}
+                        </ul>
+                        <p>Calories: ${getCleanMacros(data.dietTemplate.Bedtime, data.macroMap).calories} kcal | Protein: ${getCleanMacros(data.dietTemplate.Bedtime, data.macroMap).protein}g | Carbs: ${getCleanMacros(data.dietTemplate.Bedtime, data.macroMap).carbs}g | Fat: ${getCleanMacros(data.dietTemplate.Bedtime, data.macroMap).fat}g</p>
+                    </div>`;
+                }
+                
+                // Daily Macronutrient Summary
+                if (data.dailyMacros) {
+                    html += `<div class="meal-section">
+                        <h3>🧮 Daily Macronutrient Summary</h3>
+                        <p>• Day 1 Totals: ${data.dailyMacros.day1 ? `${data.dailyMacros.day1.calories} kcal | Protein: ${data.dailyMacros.day1.protein}g | Carbs: ${data.dailyMacros.day1.carbs}g | Fat: ${data.dailyMacros.day1.fat}g` : 'N/A'}</p>
+                        <p>• Day 2 Totals: ${data.dailyMacros.day2 ? `${data.dailyMacros.day2.calories} kcal | Protein: ${data.dailyMacros.day2.protein}g | Carbs: ${data.dailyMacros.day2.carbs}g | Fat: ${data.dailyMacros.day2.fat}g` : 'N/A'}</p>
+                    </div>`;
+                }
+                
                                 
-                                if (conditionMatch) {
-                                    condition = conditionMatch[1];
-                                    displayLine = displayLine.replace(`(${condition})`, '').trim();
-                                }
-                                
-                                if (condition) {
-                                    html += `<li><strong>${condition}:</strong> ${displayLine}</li>`;
-                                } else {
-                                    html += `<li>${displayLine}</li>`;
-                                }
-                            }
-                        }
-                        
-                        html += `</ul>`;
-                        html += `</div>`;
-                    } else if (firstLine.includes('📌 Important Disclaimer')) {
-                        html += `<div class="disclaimer">`;
-                        for (let i = 0; i < lines.length; i++) {
-                            if (lines[i].trim()) {
-                                html += `<p>${lines[i]}</p>`;
-                            }
-                        }
-                        html += `</div>`;
-                    }
-                });
+                // Special Considerations
+                if (data.diseaseConsiderations && data.diseaseConsiderations.length > 0) {
+                    html += `<div class="special-considerations">
+                        <h3>⚕️ Special Considerations</h3>
+                        <ul>
+                            ${data.diseaseConsiderations.map(consideration => `<li>${consideration}</li>`).join('')}
+                        </ul>
+                    </div>`;
+                }
+                
+                // Important Disclaimer
+                html += `<div class="disclaimer">
+                    <h3>📌 Important Disclaimer</h3>
+                    <p>This is a sample diet plan for informational purposes only.</p>
+                    <p>Please consult your doctor or a registered dietitian before making any dietary changes.</p>
+                </div>`;
                 
                 dietPlanContent.innerHTML = html;
             }
             
-            // PDF download functionality
+            // Helper function to calculate macros for a meal
+            function getCleanMacros(items, macroMap) {
+                if (!items || !Array.isArray(items) || !macroMap) {
+                    return { calories: 0, protein: 0, carbs: 0, fat: 0 };
+                }
+                
+                return items.reduce((totals, item) => {
+                    const cleanItem = item.replace(" ⭐", "").trim();
+                    const macros = macroMap[cleanItem];
+                    if (macros) {
+                        totals.calories += macros.calories || 0;
+                        totals.protein += macros.protein || 0;
+                        totals.carbs += macros.carbs || 0;
+                        totals.fat += macros.fat || 0;
+                    }
+                    return totals;
+                }, { calories: 0, protein: 0, carbs: 0, fat: 0 });
+            }
+            
+            // Helper function to format meal macros
+            function formatMealMacros(mealItems, macroMap) {
+                if (!mealItems || !Array.isArray(mealItems) || mealItems.length === 0) {
+                    return 'Calories: 0 kcal | Protein: 0g | Carbs: 0g | Fat: 0g';
+                }
+                
+                const macros = getCleanMacros(mealItems, macroMap);
+                return `Calories: ${macros.calories} kcal | Protein: ${macros.protein}g | Carbs: ${macros.carbs}g | Fat: ${macros.fat}g`;
+            }
+            
+            // PDF Download functionality
             downloadPdfBtn.addEventListener('click', function() {
-                // In a real implementation, you would use a library like jsPDF
-                // For this example, we'll just open a print dialog
-                window.print();
+                generatePDF();
             });
+            
+            function generatePDF() {
+                // Show loading state
+                const originalText = downloadPdfBtn.innerHTML;
+                downloadPdfBtn.innerHTML = '<div class="loading-spinner" style="width: 20px; height: 20px; border-width: 2px;"></div> Generating PDF...';
+                downloadPdfBtn.disabled = true;
+                
+                // Use jsPDF to generate PDF
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                // Get user name for filename
+                const userName = nameInput.value.trim() || 'User';
+                
+                // Add content to PDF
+                doc.setFontSize(20);
+                doc.setTextColor(124, 58, 237); // Primary color #7C3AED
+                doc.text('🥗 Personalized Diet Plan', 105, 20, { align: 'center' });
+                
+                doc.setFontSize(16);
+                doc.setTextColor(0, 0, 0);
+                doc.text(`For: ${userName}`, 105, 30, { align: 'center' });
+                
+                // Get the diet plan content
+                const dietPlanElement = document.getElementById('diet-plan-content');
+                
+                // Use html2canvas to capture the content as an image
+                html2canvas(dietPlanElement, {
+                    scale: 2,
+                    useCORS: true,
+                    logging: false
+                }).then(canvas => {
+                    const imgData = canvas.toDataURL('image/png');
+                    const imgWidth = 190;
+                    const pageHeight = 280;
+                    const imgHeight = canvas.height * imgWidth / canvas.width;
+                    let heightLeft = imgHeight;
+                    let position = 40; // Start position after header
+                    
+                    doc.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+                    heightLeft -= pageHeight;
+                    
+                    // Add new pages if needed
+                    while (heightLeft >= 0) {
+                        position = heightLeft - imgHeight + 40;
+                        doc.addPage();
+                        doc.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+                        heightLeft -= pageHeight;
+                    }
+                    
+                    // Save the PDF
+                    doc.save(`DietPlan_${userName}_${new Date().toISOString().split('T')[0]}.pdf`);
+                    
+                    // Restore button state
+                    downloadPdfBtn.innerHTML = originalText;
+                    downloadPdfBtn.disabled = false;
+                }).catch(error => {
+                    console.error('Error generating PDF:', error);
+                    alert('Error generating PDF. Please try again.');
+                    
+                    // Restore button state
+                    downloadPdfBtn.innerHTML = originalText;
+                    downloadPdfBtn.disabled = false;
+                });
+            }
             
             // Create new plan button
             createNewPlanBtn.addEventListener('click', function() {
-                resetForm();
-                headerSection.style.display = 'block';
-                formSection.style.display = 'block';
-                aboutSection.style.display = 'none';
                 resultsSection.style.display = 'none';
+                formSection.style.display = 'block';
+                headerSection.style.display = 'block';
                 window.scrollTo(0, 0);
+                
+                // Reset form
+                dietForm.reset();
+                
+                // Reset height unit to cm
+                heightUnitButtons.forEach(btn => btn.classList.remove('active'));
+                heightUnitButtons[0].classList.add('active');
+                heightCmContainer.style.display = 'block';
+                heightFtContainer.style.display = 'none';
+                heightCmInput.required = true;
+                heightFtInput.required = false;
+                heightInInput.required = false;
+                
+                // Reset disease checkboxes
+                diseaseCheckboxes.forEach(checkbox => {
+                    checkbox.checked = false;
+                });
+                
+                // Enable all disease checkboxes
+                diseaseCheckboxes.forEach(checkbox => {
+                    checkbox.disabled = false;
+                });
             });
         });
     </script>
